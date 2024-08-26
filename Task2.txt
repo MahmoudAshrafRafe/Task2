@@ -1,0 +1,61 @@
+                                     بسم الله الرحمن الرحيم 
+                                       _:Task2:_
+
+import pandas as pd
+import numpy as np
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, Normalizer, LabelEncoder
+from sklearn.feature_selection import SelectKBest, chi2
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.model_selection import train_test_split
+
+# Load raw data from Kaggle
+data = pd.read_csv('your_data.csv')
+
+# Step 1: Handle missing values
+# Impute missing values with mean of each column
+imputer = SimpleImputer(strategy='mean')
+
+# Step 2: Encode categorical data
+# Label encode categorical columns
+categorical_cols = ['column1', 'column2', 'column3']
+le = LabelEncoder()
+data[categorical_cols] = data[categorical_cols].apply(lambda x: le.fit_transform(x))
+
+# Step 3: Scale/Normalize data
+# Standardize numerical columns
+numerical_cols = ['column4', 'column5', 'column6']
+scaler = StandardScaler()
+data[numerical_cols] = scaler.fit_transform(data[numerical_cols])
+
+# Step 4: Reduce/Increase features
+# Select top 5 features using chi-squared test
+X = data.drop('target', axis=1)
+y = data['target']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+selector = SelectKBest(chi2, k=5)
+X_train_selected = selector.fit_transform(X_train, y_train)
+X_test_selected = selector.transform(X_test)
+
+# Step 5: Dimensionality reduction
+# Apply PCA to reduce dimensionality
+pca = PCA(n_components=0.95)
+X_train_pca = pca.fit_transform(X_train_selected)
+X_test_pca = pca.transform(X_test_selected)
+
+# Create a pipeline to perform all preprocessing steps
+preprocessing_pipeline = Pipeline([
+    ('imputer', imputer),
+    ('encoder', ColumnTransformer(transformers=[('le', le, categorical_cols)])),
+    ('scaler', ColumnTransformer(transformers=[('scaler', scaler, numerical_cols)])),
+    ('selector', selector),
+    ('pca', pca)
+])
+
+# Fit and transform the data using the pipeline
+X_preprocessed = preprocessing_pipeline.fit_transform(data.drop('target', axis=1))
+y_preprocessed = data['target']
+
+print(X_preprocessed.shape, y_preprocessed.shape)
